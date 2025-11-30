@@ -1,0 +1,16 @@
+build/
+*.jdebug.user
+
+# Compiled Python bytecode
+*.py[cod]
+
+#Python virtual environment
+.venv/
+
+#Pycharm
+.idea/
+
+#Irrelevant cubeMX generated files
+EWARM/
+
+*Zone.Identifier
