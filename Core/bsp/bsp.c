@@ -18,7 +18,7 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 
 #define USB_INTERFACE                       0
 #define SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN 3
-#define AVREF                               2.9
+#define AVREF                               2.895
 
 /**************************************************************************************************\
 * Private type definitions
@@ -32,51 +32,17 @@ static uint16_t USB0_TransmitData(const uint8_t *data_ptr, const uint16_t data_l
 static uint16_t USB0_ReceiveData(uint8_t *data_ptr, const uint16_t max_data_len);
 static void USB0_RegisterDataReadyCB(Serial_IO_Data_Ready_Callback cb, void *cb_data);
 
-static I2C_Return_T BSP_I2C_Write_SSD1306(
-    uint8_t address,
-    uint8_t *tx_buffer,
-    const uint16_t data_len,
-    I2C_Complete_Callback complete_cb,
-    I2C_Error_Callback error_cb,
-    void *cb_data);
-
-static I2C_Return_T BSP_I2C_Read_SSD1306(
-    uint8_t address,
-    uint8_t *tx_buffer,
-    const uint16_t data_len,
-    I2C_Complete_Callback complete_cb,
-    I2C_Error_Callback error_cb,
-    void *cb_data);
-
-static I2C_Return_T BSP_I2C_Write_Pressure(
-    uint8_t address,
-    uint8_t *tx_buffer,
-    const uint16_t data_len,
-    I2C_Complete_Callback complete_cb,
-    I2C_Error_Callback error_cb,
-    void *cb_data);
-
-static I2C_Return_T BSP_I2C_Read_Pressure(
-    uint8_t address,
-    uint8_t *tx_buffer,
-    const uint16_t data_len,
-    I2C_Complete_Callback complete_cb,
-    I2C_Error_Callback error_cb,
-    void *cb_data);
+static uint16_t volts_to_code12(float volts);
 
 /**************************************************************************************************\
 * Private memory declarations
 \**************************************************************************************************/
 
-static I2C_Bus_T s_i2c_bus2;
-
-static SharedI2C_T SharedI2C_Bus2;
-const QActive *AO_SharedI2C2 = &(SharedI2C_Bus2.super); // externally available
-QEvt const *i2c_bus_2_deferred_queue_storage[SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN];
-
-extern ADC_HandleTypeDef hadc2;   // defined in main.c by cubeMX
-extern TIM_HandleTypeDef htim15;  // defined in main.c by cubeMX
-extern UART_HandleTypeDef huart2; // defined in main.c by cubeMX
+// CubeMX-generated handles (defined in main.c)
+extern DAC_HandleTypeDef hdac1;
+extern DAC_HandleTypeDef hdac3;
+extern OPAMP_HandleTypeDef hopamp1;
+extern TIM_HandleTypeDef htim8;
 
 bool input_capture_found;
 
@@ -93,119 +59,69 @@ const Serial_IO_T s_bsp_serial_io_usb0 = {
 * Public functions
 \**************************************************************************************************/
 
-I2C_Write BSP_Get_I2C_Write_SSD1306()
+/**************************************************************************************************\
+* Gauge / Actuator outputs
+\**************************************************************************************************/
+
+void BSP_Gauge_SetPressure_V(float volts)
 {
-    return BSP_I2C_Write_SSD1306;
+    uint16_t code12 = volts_to_code12(volts);
+
+    HAL_StatusTypeDef retval = HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, code12);
+    Q_ASSERT(retval == HAL_OK);
 }
 
-I2C_Read BSP_Get_I2C_Read_SSD1306()
+void BSP_Gauge_SetTemperature_V(float volts)
 {
-    return BSP_I2C_Read_SSD1306;
+    uint16_t code12 = volts_to_code12(volts);
+
+    HAL_StatusTypeDef retval = HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, code12);
+    Q_ASSERT(retval == HAL_OK);
 }
 
-I2C_Write BSP_Get_I2C_Write_Pressure()
+void BSP_Gauge_SetOpAmpRef_V(float volts)
 {
-    return BSP_I2C_Write_Pressure;
+    uint16_t code12 = volts_to_code12(volts);
+
+    HAL_StatusTypeDef retval = HAL_DAC_SetValue(&hdac3, DAC_CHANNEL_1, DAC_ALIGN_12B_R, code12);
+    Q_ASSERT(retval == HAL_OK);
 }
 
-I2C_Read BSP_Get_I2C_Read_Pressure()
+void BSP_RpmGauge_SetPFM_Hz(uint32_t freq_hz)
 {
-    return BSP_I2C_Read_Pressure;
-}
+    // if (freq_hz == 0U)
+    // {
+    //     // keep PWM running but force 0% duty => steady low
+    //     __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_1, 0U);
+    //     return;
+    // }
 
-/**
- ***************************************************************************************************
- * @brief   Put the Honeywell pressure sensor into or out of reset
- **************************************************************************************************/
-void BSP_Put_Pressure_Sensor_Into_Reset(bool reset)
-{
-    // Active low signal
-    HAL_GPIO_WritePin(PRESSURE_RST_GPIO_Port, PRESSURE_RST_Pin, !reset);
-}
+    // // Choose a fixed tick rate for decent resolution
+    // uint32_t tim_clk        = tim8_get_clk_hz();
+    // uint32_t target_tick_hz = 1000000U; // 1 MHz tick
 
-bool BSP_Get_Neutral()
-{
-    // If in neutral, the neutral wire is 6Ω path to GND, so the GPIO is low
-    return HAL_GPIO_ReadPin(NEUTRAL_DETECT_GPIO_Port, NEUTRAL_DETECT_Pin) == GPIO_PIN_RESET;
-}
+    // uint32_t psc = (tim_clk / target_tick_hz);
+    // if (psc == 0U)
+    // {
+    //     psc = 1U;
+    // }
+    // psc -= 1U;
 
-bool BSP_Get_Start()
-{
-    // If starting, the neutral wire +12, so the GPIO is high
-    return HAL_GPIO_ReadPin(START_DET_GPIO_Port, START_DET_Pin) == GPIO_PIN_SET;
-}
-uint8_t BSP_Get_Red()
-{
-    // Test for tri-state
-    bool pin1    = HAL_GPIO_ReadPin(RED_SENSE_1_GPIO_Port, RED_SENSE_1_Pin) == GPIO_PIN_SET;
-    bool pin2    = HAL_GPIO_ReadPin(RED_SENSE_2_GPIO_Port, RED_SENSE_2_Pin) == GPIO_PIN_SET;
-    uint8_t data = (pin2 << 1) | pin1;
-    switch (data)
-    {
-        case 0x00: {
-            return LOW; // the wire is low
-        }
-        case 0x03: {
-            return HIGH; // the wire is high
-        }
-        case 0x02: {
-            return HIGH_Z; // the wire is high-Z
-        }
-        default: {
-            return SIG_UNKNOWN; // shouldn't happen
-        }
-    }
-}
+    // uint32_t tick_hz = tim_clk / (psc + 1U);
+    // uint32_t arr     = (tick_hz / freq_hz);
+    // if (arr == 0U)
+    // {
+    //     arr = 1U;
+    // }
+    // arr -= 1U;
 
-uint8_t BSP_Get_Orange()
-{
-    // Test for tri-state
-    bool pin1    = HAL_GPIO_ReadPin(ORANGE_SENSE_1_GPIO_Port, ORANGE_SENSE_1_Pin) == GPIO_PIN_SET;
-    bool pin2    = HAL_GPIO_ReadPin(ORANGE_SENSE_2_GPIO_Port, ORANGE_SENSE_2_Pin) == GPIO_PIN_SET;
-    uint8_t data = (pin2 << 1) | pin1;
-    switch (data)
-    {
-        case 0x00: {
-            return LOW; // the wire is low
-        }
-        case 0x03: {
-            return HIGH; // the wire is high
-        }
-        case 0x02: {
-            return HIGH_Z; // the wire is high-Z
-        }
-        default: {
-            return SIG_UNKNOWN; // shouldn't happen
-        }
-    }
-}
+    // __HAL_TIM_SET_PRESCALER(&htim8, psc);
+    // __HAL_TIM_SET_AUTORELOAD(&htim8, arr);
 
-bool BSP_Get_Buzzer()
-{
-    // Buzzer is active low
-    return HAL_GPIO_ReadPin(nBUZZER_SENSE_GPIO_Port, nBUZZER_SENSE_Pin) == GPIO_PIN_RESET;
-}
+    // // 50% duty
+    // __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_1, (arr + 1U) / 2U);
 
-uint16_t BSP_ADC_Read_VBAT(void)
-{
-    uint32_t raw_adc = HAL_ADC_GetValue(&hadc2);
-    HAL_ADC_Start(&hadc2); // a bit hacky, but start the next conversion
-    // Multiplier is 4.6 nominally, but the actual value seems to be 4.3
-    float hv_sense = raw_adc * AVREF / 4096. * 4.6 * 100; // return hundredths of volts
-    // calibration scale & offset
-    hv_sense = 1.08992 * hv_sense + 1.0109;
-    return (uint16_t) hv_sense;
-}
-
-/**
- ***************************************************************************************************
- * @brief   GPIO motor ECU Functions
- **************************************************************************************************/
-
-void BSP_Tach_Capture_Timer_Enable()
-{
-    HAL_NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
-    input_capture_found = false;
+    // __HAL_TIM_GENERATE_EVENT(&htim8, TIM_EVENTSOURCE_UPDATE);
 }
 
 /**
@@ -291,72 +207,26 @@ uint32_t BSP_Get_Milliseconds_Tick(void)
 }
 
 //............................................................................
-void BSP_Init_I2C(void)
+void BSP_Init(void)
 {
     HAL_StatusTypeDef retval;
 
-    /////////////////////////
-    // I2C Bus 2
-    /////////////////////////
-
-    // I2C Bus 2 Peripheral
-    I2C_HandleTypeDef *p_hi2c2 = STM32_GetI2CHandle(I2C_BUS_ID_2);
-
-    p_hi2c2->Instance              = I2C2;
-    p_hi2c2->Init.Timing           = 0x50916E9F; // 0x00503D58;
-    p_hi2c2->Init.OwnAddress1      = 0;
-    p_hi2c2->Init.AddressingMode   = I2C_ADDRESSINGMODE_7BIT;
-    p_hi2c2->Init.DualAddressMode  = I2C_DUALADDRESS_DISABLE;
-    p_hi2c2->Init.OwnAddress2      = 0;
-    p_hi2c2->Init.OwnAddress2Masks = I2C_OA2_NOMASK;
-    p_hi2c2->Init.GeneralCallMode  = I2C_GENERALCALL_DISABLE;
-    p_hi2c2->Init.NoStretchMode    = I2C_NOSTRETCH_DISABLE;
-
-    retval = HAL_I2C_Init(p_hi2c2);
-    Q_ASSERT(retval == HAL_OK);
-
-    retval = HAL_I2CEx_ConfigAnalogFilter(p_hi2c2, I2C_ANALOGFILTER_ENABLE);
-    Q_ASSERT(retval == HAL_OK);
-
-    retval = HAL_I2CEx_ConfigDigitalFilter(p_hi2c2, 0);
-    Q_ASSERT(retval == HAL_OK);
-
-    I2C_Bus_Init(&s_i2c_bus2, I2C_BUS_ID_2);
-}
-
-//............................................................................
-void BSP_Init(void)
-{
     // initialize TinyUSB device stack on configured roothub port
     tud_init(BOARD_TUD_RHPORT);
 
-    /**********************************************************************************P****************\
-    * Init TIM15 for tach input capture
-    \**************************************************************************************************/
+    // --- Start DAC1 external outputs ---
+    retval = HAL_DAC_Start(&hdac1, DAC_CHANNEL_1); // DAC1_OUT1
+    Q_ASSERT(retval == HAL_OK);
 
-    // TIM15 is prescaled to 144Mhz/(71+1)=2Mhz, or 0.5 microsecond per tick
-    __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
-    HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1); // input capture timer
-    __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
+    retval = HAL_DAC_Start(&hdac1, DAC_CHANNEL_2); // DAC1_OUT2
+    Q_ASSERT(retval == HAL_OK);
 
-    /**************************************************************************************************\
-    * Init UART2
-    \**************************************************************************************************/
-    /* Flush the data registers from unexpected data */
-    __HAL_UART_FLUSH_DRREGISTER(&huart2);
-    // if (HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_byte, 1) != HAL_OK)
-    // {
-    //   Error_Handler();
-    // }
+    // --- Start DAC3 driving OPAMP1 follower input ---
+    retval = HAL_DAC_Start(&hdac3, DAC_CHANNEL_1); // DAC3_OUT1 -> OPAMP1 VINP
+    Q_ASSERT(retval == HAL_OK);
 
-    // Initialize I2C buses
-    BSP_Init_I2C();
-
-    SharedI2C_ctor(
-        &SharedI2C_Bus2,
-        I2C_BUS_ID_2,
-        i2c_bus_2_deferred_queue_storage,
-        SHARED_I2C_BUS_2_DEFERRED_QUEUE_LEN);
+    retval = HAL_OPAMP_Start(&hopamp1); // buffer DAC3 via OPAMP1 follower
+    Q_ASSERT(retval == HAL_OK);
 }
 
 //............................................................................
@@ -448,62 +318,6 @@ const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0()
 * Private functions
 \**************************************************************************************************/
 
-static I2C_Return_T BSP_I2C_Write_SSD1306(
-    uint8_t address,
-    uint8_t *tx_buffer,
-    const uint16_t data_len,
-    I2C_Complete_Callback complete_cb,
-    I2C_Error_Callback error_cb,
-    void *cb_data)
-{
-    // return I2C_Bus_Write(
-    //     I2C_BUS_ID_2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
-    return SharedI2C_Write(
-        &SharedI2C_Bus2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
-}
-
-static I2C_Return_T BSP_I2C_Read_SSD1306(
-    uint8_t address,
-    uint8_t *rx_buffer,
-    const uint16_t data_len,
-    I2C_Complete_Callback complete_cb,
-    I2C_Error_Callback error_cb,
-    void *cb_data)
-{
-    // return I2C_Bus_Read(I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb,
-    // cb_data);
-    return SharedI2C_Read(
-        &SharedI2C_Bus2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
-}
-
-static I2C_Return_T BSP_I2C_Write_Pressure(
-    uint8_t address,
-    uint8_t *tx_buffer,
-    const uint16_t data_len,
-    I2C_Complete_Callback complete_cb,
-    I2C_Error_Callback error_cb,
-    void *cb_data)
-{
-    // return I2C_Bus_Write(
-    //     I2C_BUS_ID_2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
-    return SharedI2C_Write(
-        &SharedI2C_Bus2, address, tx_buffer, data_len, complete_cb, error_cb, cb_data);
-}
-
-static I2C_Return_T BSP_I2C_Read_Pressure(
-    uint8_t address,
-    uint8_t *rx_buffer,
-    const uint16_t data_len,
-    I2C_Complete_Callback complete_cb,
-    I2C_Error_Callback error_cb,
-    void *cb_data)
-{
-    // return I2C_Bus_Read(
-    //     I2C_BUS_ID_2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
-    return SharedI2C_Read(
-        &SharedI2C_Bus2, address, rx_buffer, data_len, complete_cb, error_cb, cb_data);
-}
-
 /**
  ***************************************************************************************************
  *  @brief   Functions for USB
@@ -543,4 +357,27 @@ void tud_cdc_rx_cb(uint8_t itf)
     {
         // do nothing
     }
+}
+
+/**************************************************************************************************\
+* BSP Helper Functions
+\**************************************************************************************************/
+
+static uint16_t volts_to_code12(float volts)
+{
+    if (volts <= 0.0f)
+    {
+        return 0U;
+    }
+    if (volts >= AVREF)
+    {
+        return 0x0FFFU;
+    }
+    float ratio   = volts / AVREF;
+    uint32_t code = (uint32_t) (ratio * 4095.0f + 0.5f);
+    if (code > 0x0FFFU)
+    {
+        code = 0x0FFFU;
+    }
+    return (uint16_t) code;
 }

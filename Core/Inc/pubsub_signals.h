@@ -9,21 +9,9 @@ enum PubSubSignals
 {
     PUBSUB_FIRST_SIG = Q_USER_SIG,
     PUBSUB_FAULT_GENERATED_SIG,
-    PUBSUB_PRESSURE_SIG,
-    PUBSUB_TEMPERATURE_SIG,
-    PUBSUB_MOTOR_DATA_SIG,
-    PUBSUB_TACH_SIG,
-    PUBSUB_UART_COMPLETE_SIG,
+    PUBSUB_ENGINE_DATA_SIG,
     PUBSUB_MAX_SIG
 };
-
-typedef enum
-{
-    LOW,
-    HIGH,
-    HIGH_Z,
-    SIG_UNKNOWN
-} Colored_Wire_Stat_T;
 
 typedef struct
 {
@@ -36,20 +24,6 @@ typedef struct
     QEvt super;
     int16_t num; // size of the buffer 'instructions', which should be >= actual size
 } Int16Event_T;
-
-typedef struct
-{
-    QEvt super;
-    int16_t temperature;
-    int16_t pressure;
-    int16_t tachometer;
-    int16_t vbat;
-    bool start;
-    bool neutral;
-    bool buzzer;
-    Colored_Wire_Stat_T red;
-    Colored_Wire_Stat_T orange;
-} MotorDataEvent_T;
 
 typedef struct
 {

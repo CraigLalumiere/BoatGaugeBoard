@@ -64,7 +64,7 @@ void AppCLI_ctor(const Serial_IO_T *const serial_io_interface)
     AppCLI_inst.cli->writeChar = CLI_WriteChar;
 
     // add commands from command table
-    AppCLI_AddCommandsToCLI(AppCLI_inst.cli);
+    CLI_AddCommands(AppCLI_inst.cli);
 
     // call QP object constructors
     AppCLI *const me = &AppCLI_inst;

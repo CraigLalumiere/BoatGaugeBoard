@@ -11,7 +11,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 #
 # Core project settings
 #
-project(BoatMotorBoard)
+project(BoatGaugeBoard)
 enable_language(C ASM)
 
 message("Build type: " ${CMAKE_BUILD_TYPE})
@@ -88,12 +88,7 @@ set(sources_SRCS
     ${PROJ_PATH}/Core/services/reset.c
     ${PROJ_PATH}/Core/services/reset_reason_print.c
     ${PROJ_PATH}/Core/services/usb.c
-    ${PROJ_PATH}/Core/services/data_manager.c
-    ${PROJ_PATH}/Core/services/LMT01.c
-    ${PROJ_PATH}/Core/services/pressure_sensor.c
-    ${PROJ_PATH}/Core/services/SSD1306.c
-    ${PROJ_PATH}/Core/services/usb.c
-    ${PROJ_PATH}/Core/services/ssd1306_fonts.c
+    ${PROJ_PATH}/Core/services/director.c
 
     # TODO: check if this file required
     ${PROJ_PATH}/Core/Src/system_stm32g4xx.c    
@@ -129,13 +124,12 @@ set(sources_SRCS
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim_ex.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_ll_usb.c
-    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc.c
-    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc_ex.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_i2c.c
-    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart.c
-    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart_ex.c
     ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_i2c_ex.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_opamp.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_fdcan.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dac.c
 
 
     # Tiny USB

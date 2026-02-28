@@ -44,44 +44,47 @@ void BSP_LED_Off(void);
 // void BSP_debug_gpio_off(void);
 // void BSP_debug_gpio_toggle(void);
 
+/**************************************************************************************************\
+* Gauge / Actuator outputs
+\**************************************************************************************************/
+
+/**
+ * @brief Initialize gauge output peripherals:
+ *        - DAC1 CH1 (pressure)
+ *        - DAC1 CH2 (temperature)
+ *        - DAC3 CH1 + OPAMP1 follower (offset reference, set once)
+ *        - TIM8 CH1 PWM (PFM for RPM gauge)
+ *
+ * @param offset_volts  DAC3/OPAMP1 offset reference voltage (set once, never changed)
+ */
+void BSP_Gauges_Init(float offset_volts);
+
+/**
+ * @brief Set pressure gauge drive voltage (DAC1 OUT1).
+ */
+void BSP_Gauge_SetPressure_V(float volts);
+
+/**
+ * @brief Set temperature gauge drive voltage (DAC1 OUT2).
+ */
+void BSP_Gauge_SetTemperature_V(float volts);
+
+/**
+ * @brief Set op amp + reference voltage (DAC3 OUT1).
+ */
+void BSP_Gauge_SetOpAmpRef_V(float volts);
+
+/**
+ * @brief Set RPM gauge PFM frequency on TIM8_CH1.
+ *        freq_hz == 0 stops pulses (output low via 0% duty).
+ */
+void BSP_RpmGauge_SetPFM_Hz(uint32_t freq_hz);
+
 /**
  ***************************************************************************************************
  * @brief   Retrieve Serial IO interface for the USB Interface serial comms channels
  **************************************************************************************************/
 const Serial_IO_T *BSP_Get_Serial_IO_Interface_USB0();
-
-/**
- ***************************************************************************************************
- * @brief   I2C Functions
- **************************************************************************************************/
-I2C_Write BSP_Get_I2C_Write_SSD1306();
-I2C_Read BSP_Get_I2C_Read_SSD1306();
-I2C_Write BSP_Get_I2C_Write_Pressure();
-I2C_Read BSP_Get_I2C_Read_Pressure();
-
-/**
- ***************************************************************************************************
- * @brief   Tachometer Functions
- **************************************************************************************************/
-
-void BSP_Tach_Capture_Timer_Enable();
-
-/**
- ***************************************************************************************************
- * @brief   Pressure Sensor Functions
- **************************************************************************************************/
-void BSP_Put_Pressure_Sensor_Into_Reset(bool reset);
-
-/**
- ***************************************************************************************************
- * @brief   GPIO motor ECU Functions
- **************************************************************************************************/
-bool BSP_Get_Neutral();
-bool BSP_Get_Start();
-uint8_t BSP_Get_Red();
-uint8_t BSP_Get_Orange();
-bool BSP_Get_Buzzer();
-uint16_t BSP_ADC_Read_VBAT(void);
 
 /**
  ***************************************************************************************************
