@@ -59,14 +59,18 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define BACKLIGHT_DET_Pin GPIO_PIN_6
+#define BACKLIGHT_DET_Pin       GPIO_PIN_6
 #define BACKLIGHT_DET_GPIO_Port GPIOA
-#define CAN_FLT_Pin GPIO_PIN_2
-#define CAN_FLT_GPIO_Port GPIOB
-#define BACKLIGHT_EN_Pin GPIO_PIN_3
-#define BACKLIGHT_EN_GPIO_Port GPIOB
-#define FW_LED_Pin GPIO_PIN_5
-#define FW_LED_GPIO_Port GPIOB
+#define CAN_FLT_Pin             GPIO_PIN_2
+#define CAN_FLT_GPIO_Port       GPIOB
+#define CAN_RX_Pin              GPIO_PIN_12
+#define CAN_RX_GPIO_Port        GPIOB
+#define CAN_TX_Pin              GPIO_PIN_13
+#define CAN_TX_GPIO_Port        GPIOB
+#define BACKLIGHT_EN_Pin        GPIO_PIN_3
+#define BACKLIGHT_EN_GPIO_Port  GPIOB
+#define FW_LED_Pin              GPIO_PIN_5
+#define FW_LED_GPIO_Port        GPIOB
 
 /* USER CODE BEGIN Private defines */
 
