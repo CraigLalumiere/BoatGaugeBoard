@@ -59,23 +59,6 @@ static QState initial(Director *const me, void const *const par);
 static QState idle(Director *const me, QEvt const *const e);
 static QState active(Director *const me, QEvt const *const e);
 
-// Hardware helpers
-static uint16_t clamp_u16(uint32_t x, uint32_t lo, uint32_t hi);
-static uint16_t map_u16_to_dac12(uint32_t x, uint32_t x_min, uint32_t x_max);
-static uint16_t map_s16_to_dac12(int32_t x, int32_t x_min, int32_t x_max);
-
-static uint32_t tim8_get_clk_hz(void);
-static void tim8_set_pwm_freq_hz(uint32_t freq_hz);
-static uint32_t rpm_to_hz(uint16_t rpm);
-
-/**************************************************************************************************\
-* CubeMX-generated handles (defined in main.c)
-\**************************************************************************************************/
-extern DAC_HandleTypeDef hdac1;
-extern DAC_HandleTypeDef hdac3;
-extern OPAMP_HandleTypeDef hopamp1;
-extern TIM_HandleTypeDef htim8;
-
 /**************************************************************************************************\
 * Public functions
 \**************************************************************************************************/
@@ -106,12 +89,16 @@ static QState idle(Director *const me, QEvt const *const e)
     {
         case Q_ENTRY_SIG: {
             // Initialize needles to “zero”
-            BSP_Gauge_SetPressure_V(0);
-            BSP_Gauge_SetTemperature_V(0);
+            BSP_Gauge_SetPressure_V(3);
+            BSP_Gauge_SetTemperature_V(3);
             BSP_Gauge_SetOpAmpRef_V(1.78);
 
             // Start at 0 Hz
             BSP_RpmGauge_SetPFM_Hz(0U);
+
+            // startup Box to Box (CAN)
+            QEvt *evt = Q_NEW(QEvt, PUBSUB_BOX_TO_BOX_STARTUP_SIG);
+            QACTIVE_PUBLISH(evt, &me->super);
 
             status = Q_HANDLED();
             break;

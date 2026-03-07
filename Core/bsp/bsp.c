@@ -43,6 +43,7 @@ extern DAC_HandleTypeDef hdac1;
 extern DAC_HandleTypeDef hdac3;
 extern OPAMP_HandleTypeDef hopamp1;
 extern TIM_HandleTypeDef htim8;
+extern FDCAN_HandleTypeDef hfdcan2; // defined in main.c by cubeMX
 
 bool input_capture_found;
 
@@ -122,6 +123,37 @@ void BSP_RpmGauge_SetPFM_Hz(uint32_t freq_hz)
     // __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_1, (arr + 1U) / 2U);
 
     // __HAL_TIM_GENERATE_EVENT(&htim8, TIM_EVENTSOURCE_UPDATE);
+}
+
+/**
+ ***************************************************************************************************
+ *
+ * @brief   Write CAN Message with Standard ID (range of 0 to 0x7FF)
+ *
+ * @retval  0 if message is sucsssfully queued into TX mailbox
+ * @retval  1 if TX mailbox is full and message cannot be send (likely BUS error or
+ *disconnected)
+ *
+ **************************************************************************************************/
+int32_t BSP_CAN_Write_Msg(const CAN_Message_T *msg)
+{
+    HAL_StatusTypeDef retval;
+    FDCAN_TxHeaderTypeDef TxHeader;
+
+    /* Prepare Tx Header */
+    TxHeader.Identifier          = msg->id;
+    TxHeader.IdType              = FDCAN_STANDARD_ID;
+    TxHeader.TxFrameType         = FDCAN_DATA_FRAME;
+    TxHeader.DataLength          = (uint32_t) msg->dlc;
+    TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+    TxHeader.BitRateSwitch       = FDCAN_BRS_OFF;
+    TxHeader.FDFormat            = FDCAN_FD_CAN;
+    TxHeader.TxEventFifoControl  = FDCAN_NO_TX_EVENTS;
+    TxHeader.MessageMarker       = 0;
+
+    retval = HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader, msg->data);
+
+    return (int32_t) retval;
 }
 
 /**
@@ -206,6 +238,43 @@ uint32_t BSP_Get_Milliseconds_Tick(void)
     return HAL_GetTick();
 }
 
+/**
+ ***************************************************************************************************
+ *
+ * @brief   Configure FDCAN
+ *
+ **************************************************************************************************/
+void BSP_CAN_Bus_Init(void)
+{
+    FDCAN_FilterTypeDef sFilterConfig;
+    HAL_StatusTypeDef retval;
+
+    // Configure Rx filter
+    sFilterConfig.IdType       = FDCAN_STANDARD_ID;
+    sFilterConfig.FilterIndex  = 0;
+    sFilterConfig.FilterType   = FDCAN_FILTER_MASK;
+    sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
+    sFilterConfig.FilterID1    = 0x00000001U; // id = don't care
+    sFilterConfig.FilterID2    = 0x00000000U; // mask = allow all (don't compare any ID)
+
+    retval = HAL_FDCAN_ConfigFilter(&hfdcan2, &sFilterConfig);
+    Q_ASSERT(retval == HAL_OK);
+
+    // Configure global filter:
+    // Filter all remote frames with STD and EXT ID
+    // Reject non matching frames with STD ID and EXT ID
+    retval = HAL_FDCAN_ConfigGlobalFilter(
+        &hfdcan2, FDCAN_REJECT, FDCAN_REJECT, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE);
+    Q_ASSERT(retval == HAL_OK);
+
+    // Start the FDCAN module
+    retval = HAL_FDCAN_Start(&hfdcan2);
+    Q_ASSERT(retval == HAL_OK);
+
+    retval = HAL_FDCAN_ActivateNotification(&hfdcan2, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
+    Q_ASSERT(retval == HAL_OK);
+}
+
 //............................................................................
 void BSP_Init(void)
 {
@@ -238,6 +307,11 @@ void BSP_LED_On()
 void BSP_LED_Off()
 {
     HAL_GPIO_WritePin(FW_LED_GPIO_Port, FW_LED_Pin, 0);
+}
+//............................................................................
+void BSP_LED_Toggle()
+{
+    HAL_GPIO_TogglePin(FW_LED_GPIO_Port, FW_LED_Pin);
 }
 //............................................................................
 void BSP_terminate(int16_t result)

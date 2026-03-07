@@ -89,6 +89,7 @@ set(sources_SRCS
     ${PROJ_PATH}/Core/services/reset_reason_print.c
     ${PROJ_PATH}/Core/services/usb.c
     ${PROJ_PATH}/Core/services/director.c
+    ${PROJ_PATH}/Core/services/box_to_box.c
 
     # TODO: check if this file required
     ${PROJ_PATH}/Core/Src/system_stm32g4xx.c    

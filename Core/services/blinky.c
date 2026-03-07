@@ -33,8 +33,7 @@ QActive *const AO_Blinky = &Blinky_inst.super;
 \**************************************************************************************************/
 
 static QState Blinky_initial(Blinky *const me, void const *const par);
-static QState Blinky_off(Blinky *const me, QEvt const *const e);
-static QState Blinky_on(Blinky *const me, QEvt const *const e);
+static QState Blinky_running(Blinky *const me, QEvt const *const e);
 
 /**************************************************************************************************\
 * Public functions
@@ -51,14 +50,15 @@ QState Blinky_initial(Blinky *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
 
+    QActive_subscribe((QActive *) me, PUBSUB_FAULT_GENERATED_SIG);
     // arm the time event to expire in half a second and every half second
     QTimeEvt_armX(&me->timeEvt, BSP_TICKS_PER_SEC / 2U, BSP_TICKS_PER_SEC / 2U);
 
-    return Q_TRAN(&Blinky_off);
+    return Q_TRAN(&Blinky_running);
 }
 
 //............................................................................
-QState Blinky_off(Blinky *const me, QEvt const *const e)
+QState Blinky_running(Blinky *const me, QEvt const *const e)
 {
     QState status;
     switch (e->sig)
@@ -69,29 +69,13 @@ QState Blinky_off(Blinky *const me, QEvt const *const e)
             break;
         }
         case BLINKY_TIMEOUT_SIG: {
-            status = Q_TRAN(&Blinky_on);
-            break;
-        }
-        default: {
-            status = Q_SUPER(&QHsm_top);
-            break;
-        }
-    }
-    return status;
-}
-//............................................................................
-QState Blinky_on(Blinky *const me, QEvt const *const e)
-{
-    QState status;
-    switch (e->sig)
-    {
-        case Q_ENTRY_SIG: {
-            BSP_LED_On();
+            BSP_LED_Toggle();
             status = Q_HANDLED();
             break;
         }
-        case BLINKY_TIMEOUT_SIG: {
-            status = Q_TRAN(&Blinky_off);
+        case PUBSUB_FAULT_GENERATED_SIG: {
+            QTimeEvt_armX(&me->timeEvt, BSP_TICKS_PER_SEC / 5U, BSP_TICKS_PER_SEC / 5U);
+            status = Q_HANDLED();
             break;
         }
         default: {

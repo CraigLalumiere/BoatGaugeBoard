@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 
 #include "blinky.h"
+#include "box_to_box.h"
 #include "bsp.h"
 #include "cli.h"
 #include "director.h"
@@ -52,6 +53,7 @@ typedef enum
     AO_PRIO_APP_CLI,
     AO_PRIO_DIRECTOR,
     // AO_PRIO_SHARED_I2C2,
+    AO_PRIO_BOX_TO_BOX,
     AO_PRIO_USB,
 } AO_Priority_T;
 
@@ -79,6 +81,7 @@ typedef struct
     {
         QEvt base_event;
         FaultGeneratedEvent_T fault_event;
+        CAN_Message_Received_Event_T can_event;
     } large_messages;
 } LongMessageUnion_T;
 
@@ -221,6 +224,17 @@ int main(void)
         (void *) 0,              // stack storage (not used in QK)
         0U,                      // stack size [bytes] (not used in QK)
         (void *) 0);             // no initialization param
+
+    static QEvt const *box_to_box_QueueSto[20];
+    Box_To_Box_ctor();
+    QACTIVE_START(
+        AO_BOX_TO_BOX,
+        AO_PRIO_BOX_TO_BOX,         // QP prio. of the AO
+        box_to_box_QueueSto,        // event queue storage
+        Q_DIM(box_to_box_QueueSto), // queue length [events]
+        (void *) 0,                 // stack storage (not used in QK)
+        0U,                         // stack size [bytes] (not used in QK)
+        (void *) 0);                // no initialization param
 
     static QEvt const *directorQueueSto[10];
     Director_ctor();

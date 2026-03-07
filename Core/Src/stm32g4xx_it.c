@@ -18,8 +18,8 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
 #include "stm32g4xx_it.h"
+#include "main.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "i2c_bus_stm32.h"
@@ -69,109 +69,109 @@ extern PCD_HandleTypeDef hpcd_USB_FS;
 /*           Cortex-M4 Processor Interruption and Exception Handlers          */
 /******************************************************************************/
 /**
-  * @brief This function handles Hard fault interrupt.
-  */
+ * @brief This function handles Hard fault interrupt.
+ */
 void HardFault_Handler(void)
 {
-  /* USER CODE BEGIN HardFault_IRQn 0 */
+    /* USER CODE BEGIN HardFault_IRQn 0 */
     // https://interrupt.memfault.com/blog/cortex-m-hardfault-debug#relevant-status-registers
     uint32_t hfsr  = SCB->HFSR;
     uint32_t cfsr  = SCB->CFSR;
     uint32_t abfsr = 0U; // not used
     uint32_t mmfar = SCB->MMFAR;
     Reset_DoResetWithReason(RESET_REASON_HARD_FAULT, hfsr, cfsr, abfsr, mmfar);
-  /* USER CODE END HardFault_IRQn 0 */
-  while (1)
-  {
-    /* USER CODE BEGIN W1_HardFault_IRQn 0 */
-    /* USER CODE END W1_HardFault_IRQn 0 */
-  }
+    /* USER CODE END HardFault_IRQn 0 */
+    while (1)
+    {
+        /* USER CODE BEGIN W1_HardFault_IRQn 0 */
+        /* USER CODE END W1_HardFault_IRQn 0 */
+    }
 }
 
 /**
-  * @brief This function handles Memory management fault.
-  */
+ * @brief This function handles Memory management fault.
+ */
 void MemManage_Handler(void)
 {
-  /* USER CODE BEGIN MemoryManagement_IRQn 0 */
+    /* USER CODE BEGIN MemoryManagement_IRQn 0 */
     // https://interrupt.memfault.com/blog/cortex-m-hardfault-debug#relevant-status-registers
     uint32_t hfsr  = SCB->HFSR;
     uint32_t cfsr  = SCB->CFSR;
     uint32_t abfsr = 0U; // not used
     uint32_t mmfar = SCB->MMFAR;
     Reset_DoResetWithReason(RESET_REASON_MEM_MANAGE_FAULT, hfsr, cfsr, abfsr, mmfar);
-  /* USER CODE END MemoryManagement_IRQn 0 */
-  while (1)
-  {
-    /* USER CODE BEGIN W1_MemoryManagement_IRQn 0 */
-    /* USER CODE END W1_MemoryManagement_IRQn 0 */
-  }
+    /* USER CODE END MemoryManagement_IRQn 0 */
+    while (1)
+    {
+        /* USER CODE BEGIN W1_MemoryManagement_IRQn 0 */
+        /* USER CODE END W1_MemoryManagement_IRQn 0 */
+    }
 }
 
 /**
-  * @brief This function handles Prefetch fault, memory access fault.
-  */
+ * @brief This function handles Prefetch fault, memory access fault.
+ */
 void BusFault_Handler(void)
 {
-  /* USER CODE BEGIN BusFault_IRQn 0 */
+    /* USER CODE BEGIN BusFault_IRQn 0 */
     // https://interrupt.memfault.com/blog/cortex-m-hardfault-debug
     uint32_t hfsr  = SCB->HFSR;
     uint32_t cfsr  = SCB->CFSR;
     uint32_t abfsr = 0U; // not used
     uint32_t mmfar = SCB->MMFAR;
     Reset_DoResetWithReason(RESET_REASON_BUS_FAULT, hfsr, cfsr, abfsr, mmfar);
-  /* USER CODE END BusFault_IRQn 0 */
-  while (1)
-  {
-    /* USER CODE BEGIN W1_BusFault_IRQn 0 */
-    /* USER CODE END W1_BusFault_IRQn 0 */
-  }
+    /* USER CODE END BusFault_IRQn 0 */
+    while (1)
+    {
+        /* USER CODE BEGIN W1_BusFault_IRQn 0 */
+        /* USER CODE END W1_BusFault_IRQn 0 */
+    }
 }
 
 /**
-  * @brief This function handles Undefined instruction or illegal state.
-  */
+ * @brief This function handles Undefined instruction or illegal state.
+ */
 void UsageFault_Handler(void)
 {
-  /* USER CODE BEGIN UsageFault_IRQn 0 */
+    /* USER CODE BEGIN UsageFault_IRQn 0 */
     // https://interrupt.memfault.com/blog/cortex-m-hardfault-debug
     uint32_t hfsr  = SCB->HFSR;
     uint32_t cfsr  = SCB->CFSR;
     uint32_t abfsr = 0U; // not used
     uint32_t mmfar = SCB->MMFAR;
     Reset_DoResetWithReason(RESET_REASON_USAGE_FAULT, hfsr, cfsr, abfsr, mmfar);
-  /* USER CODE END UsageFault_IRQn 0 */
-  while (1)
-  {
-    /* USER CODE BEGIN W1_UsageFault_IRQn 0 */
-    /* USER CODE END W1_UsageFault_IRQn 0 */
-  }
+    /* USER CODE END UsageFault_IRQn 0 */
+    while (1)
+    {
+        /* USER CODE BEGIN W1_UsageFault_IRQn 0 */
+        /* USER CODE END W1_UsageFault_IRQn 0 */
+    }
 }
 
 /**
-  * @brief This function handles System service call via SWI instruction.
-  */
+ * @brief This function handles System service call via SWI instruction.
+ */
 void SVC_Handler(void)
 {
-  /* USER CODE BEGIN SVCall_IRQn 0 */
+    /* USER CODE BEGIN SVCall_IRQn 0 */
 
-  /* USER CODE END SVCall_IRQn 0 */
-  /* USER CODE BEGIN SVCall_IRQn 1 */
+    /* USER CODE END SVCall_IRQn 0 */
+    /* USER CODE BEGIN SVCall_IRQn 1 */
 
-  /* USER CODE END SVCall_IRQn 1 */
+    /* USER CODE END SVCall_IRQn 1 */
 }
 
 /**
-  * @brief This function handles Debug monitor.
-  */
+ * @brief This function handles Debug monitor.
+ */
 void DebugMon_Handler(void)
 {
-  /* USER CODE BEGIN DebugMonitor_IRQn 0 */
+    /* USER CODE BEGIN DebugMonitor_IRQn 0 */
 
-  /* USER CODE END DebugMonitor_IRQn 0 */
-  /* USER CODE BEGIN DebugMonitor_IRQn 1 */
+    /* USER CODE END DebugMonitor_IRQn 0 */
+    /* USER CODE BEGIN DebugMonitor_IRQn 1 */
 
-  /* USER CODE END DebugMonitor_IRQn 1 */
+    /* USER CODE END DebugMonitor_IRQn 1 */
 }
 
 /******************************************************************************/
@@ -182,43 +182,43 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles USB high priority interrupt remap.
-  */
+ * @brief This function handles USB high priority interrupt remap.
+ */
 void USB_HP_IRQHandler(void)
 {
-  /* USER CODE BEGIN USB_HP_IRQn 0 */
+    /* USER CODE BEGIN USB_HP_IRQn 0 */
     tud_int_handler(0);
-  /* USER CODE END USB_HP_IRQn 0 */
-  /* USER CODE BEGIN USB_HP_IRQn 1 */
+    /* USER CODE END USB_HP_IRQn 0 */
+    /* USER CODE BEGIN USB_HP_IRQn 1 */
 
-  /* USER CODE END USB_HP_IRQn 1 */
+    /* USER CODE END USB_HP_IRQn 1 */
 }
 
 /**
-  * @brief This function handles USB low priority interrupt remap.
-  */
+ * @brief This function handles USB low priority interrupt remap.
+ */
 void USB_LP_IRQHandler(void)
 {
-  /* USER CODE BEGIN USB_LP_IRQn 0 */
+    /* USER CODE BEGIN USB_LP_IRQn 0 */
     tud_int_handler(0);
-  /* USER CODE END USB_LP_IRQn 0 */
-  /* USER CODE BEGIN USB_LP_IRQn 1 */
+    /* USER CODE END USB_LP_IRQn 0 */
+    /* USER CODE BEGIN USB_LP_IRQn 1 */
 
-  /* USER CODE END USB_LP_IRQn 1 */
+    /* USER CODE END USB_LP_IRQn 1 */
 }
 
 /**
-  * @brief This function handles FDCAN2 interrupt 0.
-  */
+ * @brief This function handles FDCAN2 interrupt 0.
+ */
 void FDCAN2_IT0_IRQHandler(void)
 {
-  /* USER CODE BEGIN FDCAN2_IT0_IRQn 0 */
-
-  /* USER CODE END FDCAN2_IT0_IRQn 0 */
-  HAL_FDCAN_IRQHandler(&hfdcan2);
-  /* USER CODE BEGIN FDCAN2_IT0_IRQn 1 */
-
-  /* USER CODE END FDCAN2_IT0_IRQn 1 */
+    /* USER CODE BEGIN FDCAN2_IT0_IRQn 0 */
+    QK_ISR_ENTRY();
+    /* USER CODE END FDCAN2_IT0_IRQn 0 */
+    HAL_FDCAN_IRQHandler(&hfdcan2);
+    /* USER CODE BEGIN FDCAN2_IT0_IRQn 1 */
+    QK_ISR_EXIT();
+    /* USER CODE END FDCAN2_IT0_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
