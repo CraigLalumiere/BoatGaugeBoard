@@ -1,4 +1,5 @@
 #include "cli_manual_commands.h"
+#include "bsp.h"
 #include "bsp_manual.h"
 #include "interfaces/i2c_bus.h"
 #include "qsafe.h"
@@ -67,6 +68,65 @@ void on_cli_digital_out_set(EmbeddedCli *cli, char *args, void *context)
     }
 
     BSP_Manual_Config_and_Set_Digital_Output(arg_port, (uint8_t) arg_pin, (arg_value > 0));
+}
+
+#define HELP_FULL_GAUGE_SET \
+    "\r\n\
+ Usage: gauge-set [pressure|temperature] VOLTS\r\n\
+ \r\n\
+ pressure     Drive the pressure gauge DAC directly\r\n\
+ temperature  Drive the temperature gauge DAC directly\r\n\
+ VOLTS        Floating-point voltage to command\r\n"
+
+void on_cli_gauge_set(EmbeddedCli *cli, char *args, void *context)
+{
+    (void) context;
+
+    char *arg_end;
+    bool is_invalid_arg = false;
+
+    if (embeddedCliGetTokenCount(args) != 2)
+    {
+        embeddedCliPrint(cli, HELP_FULL_GAUGE_SET);
+        return;
+    }
+
+    const char *gauge_name  = embeddedCliGetToken(args, 1);
+    const char *voltage_arg = embeddedCliGetToken(args, 2);
+    float volts             = strtof(voltage_arg, &arg_end);
+
+    if ((arg_end == voltage_arg) || (*arg_end != '\0'))
+    {
+        embeddedCliPrint(cli, " VOLTS must be a floating-point number\r\n");
+        is_invalid_arg = true;
+    }
+
+    if (!is_invalid_arg)
+    {
+        if (strcmp(gauge_name, "pressure") == 0)
+        {
+            BSP_Gauge_SetPressure_V(volts);
+        }
+        else if (strcmp(gauge_name, "temperature") == 0)
+        {
+            BSP_Gauge_SetTemperature_V(volts);
+        }
+        else
+        {
+            embeddedCliPrint(cli, " Gauge must be 'pressure' or 'temperature'\r\n");
+            is_invalid_arg = true;
+        }
+    }
+
+    if (is_invalid_arg)
+    {
+        embeddedCliPrint(cli, HELP_FULL_GAUGE_SET);
+        return;
+    }
+
+    char print_buffer[64];
+    snprintf(print_buffer, sizeof(print_buffer), "%s gauge set to %.3f V", gauge_name, volts);
+    embeddedCliPrint(cli, print_buffer);
 }
 
 #define HELP_FULL_DIGITAL_IN_READ \

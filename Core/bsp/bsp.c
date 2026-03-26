@@ -88,41 +88,48 @@ void BSP_Gauge_SetOpAmpRef_V(float volts)
     Q_ASSERT(retval == HAL_OK);
 }
 
-void BSP_RpmGauge_SetPFM_Hz(uint32_t freq_hz)
+void BSP_RpmGauge_SetPFM_RPM(uint32_t target_RPM)
 {
-    // if (freq_hz == 0U)
-    // {
-    //     // keep PWM running but force 0% duty => steady low
-    //     __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_1, 0U);
-    //     return;
-    // }
+    uint32_t target_Hz = target_RPM / 60 * 10;
+    if (target_Hz == 0U)
+    {
+        // keep PWM running but force 0% duty => steady low
+        __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_1, 0U);
+        return;
+    }
 
-    // // Choose a fixed tick rate for decent resolution
-    // uint32_t tim_clk        = tim8_get_clk_hz();
-    // uint32_t target_tick_hz = 1000000U; // 1 MHz tick
+    // 144MHz base click with 72 PSC
+    uint32_t tim_clk = 2000000U;
 
-    // uint32_t psc = (tim_clk / target_tick_hz);
-    // if (psc == 0U)
-    // {
-    //     psc = 1U;
-    // }
-    // psc -= 1U;
+    uint32_t arr = tim_clk / target_Hz;
+    if (arr == 0U)
+    {
+        arr = 1U;
+    }
+    arr -= 1U;
 
-    // uint32_t tick_hz = tim_clk / (psc + 1U);
-    // uint32_t arr     = (tick_hz / freq_hz);
-    // if (arr == 0U)
-    // {
-    //     arr = 1U;
-    // }
-    // arr -= 1U;
+    __HAL_TIM_SET_AUTORELOAD(&htim8, arr);
 
-    // __HAL_TIM_SET_PRESCALER(&htim8, psc);
-    // __HAL_TIM_SET_AUTORELOAD(&htim8, arr);
-
-    // // 50% duty
-    // __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_1, (arr + 1U) / 2U);
+    // 50% duty
+    __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_1, (arr + 1U) / 2U);
 
     // __HAL_TIM_GENERATE_EVENT(&htim8, TIM_EVENTSOURCE_UPDATE);
+}
+
+/**
+ * @brief Read digital input from backlight switch
+ */
+bool BSP_Get_Backlight(void)
+{
+    return HAL_GPIO_ReadPin(BACKLIGHT_DET_GPIO_Port, BACKLIGHT_DET_Pin) == GPIO_PIN_SET;
+}
+
+/**
+ * @brief Enable/disable backlight on gauge cluster
+ */
+void BSP_Set_Backlight(bool x)
+{
+    HAL_GPIO_WritePin(BACKLIGHT_EN_GPIO_Port, BACKLIGHT_EN_Pin, x);
 }
 
 /**
@@ -295,6 +302,10 @@ void BSP_Init(void)
     Q_ASSERT(retval == HAL_OK);
 
     retval = HAL_OPAMP_Start(&hopamp1); // buffer DAC3 via OPAMP1 follower
+    Q_ASSERT(retval == HAL_OK);
+
+    // -- Start TIM8 for TACH PFM output --
+    retval = HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
     Q_ASSERT(retval == HAL_OK);
 }
 

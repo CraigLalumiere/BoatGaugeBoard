@@ -21,7 +21,7 @@
 typedef union
 {
     CAN_Msg_Test1_T test1;
-    CAN_Msg_Pressure_Flow_T box2_pressure_flow_msg;
+    CAN_Msg_Motor_Data_T motor_data_msg;
     CAN_Msg_TDS_T water_tds_msg;
     CAN_Msg_Water_Good_T water_good_msg;
 } CAN_Msgs_T;
@@ -243,14 +243,26 @@ void handle_can_message_received(Box_To_Box *const me, QEvt const *const e)
 
     can_msg = (CAN_Msgs_T *) &msg_received_evt->msg;
 
-    // switch (msg_received_evt->msg.id)
-    // {
-    //     case CAN_MSG_WATER_GOOD_ID: {
-    //         if (can_msg->water_good_msg.water_good)
-    //             BSP_Blue_LED_On();
-    //         else
-    //             BSP_Blue_LED_Off();
-    //         break;
-    //     }
-    // }
+    switch (msg_received_evt->msg.id)
+    {
+        case CAN_MSG_TEST1_ID: {
+            break;
+        }
+        case CAN_MSG_MOTOR_DATA_ID: {
+            CAN_Msg_Motor_Data_T motor_data = can_msg->motor_data_msg;
+
+            MotorDataEvent_T *event = Q_NEW(MotorDataEvent_T, PUBSUB_MOTOR_DATA_SIG);
+            event->neutral          = false;
+            event->start            = false;
+            event->temp_good        = true;
+            event->pres_good        = true;
+            event->buzzer           = true;
+            event->vbat             = 0;
+            event->temperature      = motor_data.temperature;
+            event->pressure         = motor_data.pressure;
+            event->tachometer       = motor_data.tachometer;
+            QACTIVE_PUBLISH(&event->super, &me->super);
+            break;
+        }
+    }
 }

@@ -73,6 +73,14 @@ static CliCommandBinding cli_cmd_list[] = {
         NULL,                                  // optional pointer to any application context
         on_cli_i2c                             // binding function
     },
+
+    (CliCommandBinding) {
+        "gauge-set",                                     // command name
+        "Set a gauge DAC voltage for calibration",       // Optional help for a command
+        true,                                             // flag whether to tokenize arguments
+        NULL,                                             // optional pointer to any application context
+        on_cli_gauge_set                                  // binding function
+    },
 };
 
 void CLI_AddCommands(EmbeddedCli *cli)

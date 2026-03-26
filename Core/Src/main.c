@@ -431,7 +431,7 @@ static void MX_FDCAN2_Init(void)
     /* USER CODE END FDCAN2_Init 1 */
     hfdcan2.Instance                  = FDCAN2;
     hfdcan2.Init.ClockDivider         = FDCAN_CLOCK_DIV1;
-    hfdcan2.Init.FrameFormat          = FDCAN_FRAME_CLASSIC;
+    hfdcan2.Init.FrameFormat          = FDCAN_FRAME_FD_NO_BRS;
     hfdcan2.Init.Mode                 = FDCAN_MODE_NORMAL;
     hfdcan2.Init.AutoRetransmission   = ENABLE;
     hfdcan2.Init.TransmitPause        = DISABLE;
@@ -552,7 +552,7 @@ static void MX_TIM8_Init(void)
 
     /* USER CODE END TIM8_Init 1 */
     htim8.Instance               = TIM8;
-    htim8.Init.Prescaler         = 0;
+    htim8.Init.Prescaler         = 71;
     htim8.Init.CounterMode       = TIM_COUNTERMODE_UP;
     htim8.Init.Period            = 65535;
     htim8.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;

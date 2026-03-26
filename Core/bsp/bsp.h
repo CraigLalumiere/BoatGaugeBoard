@@ -80,7 +80,17 @@ void BSP_Gauge_SetOpAmpRef_V(float volts);
  * @brief Set RPM gauge PFM frequency on TIM8_CH1.
  *        freq_hz == 0 stops pulses (output low via 0% duty).
  */
-void BSP_RpmGauge_SetPFM_Hz(uint32_t freq_hz);
+void BSP_RpmGauge_SetPFM_RPM(uint32_t RPM);
+
+/**
+ * @brief Read digital input from backlight switch
+ */
+bool BSP_Get_Backlight(void);
+
+/**
+ * @brief Enable/disable backlight on gauge cluster
+ */
+void BSP_Set_Backlight(bool x);
 
 /**
  ***************************************************************************************************
