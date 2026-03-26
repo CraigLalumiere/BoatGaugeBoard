@@ -29,10 +29,10 @@ typedef struct
 typedef struct
 {
     QEvt super;
-    int16_t temperature;
-    int16_t pressure;
-    int16_t tachometer;
-    int16_t vbat;
+    float temperature; // degrees C
+    float pressure;    // PSI
+    float tachometer;  // RPM
+    float vbat;        // volts
     bool start;
     bool neutral;
     bool buzzer;

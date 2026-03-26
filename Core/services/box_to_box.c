@@ -257,10 +257,10 @@ void handle_can_message_received(Box_To_Box *const me, QEvt const *const e)
             event->temp_good        = true;
             event->pres_good        = true;
             event->buzzer           = true;
-            event->vbat             = 0;
-            event->temperature      = motor_data.temperature;
-            event->pressure         = motor_data.pressure;
-            event->tachometer       = motor_data.tachometer;
+            event->vbat             = 0.0f;
+            event->temperature      = (float) motor_data.temperature;
+            event->pressure         = (float) motor_data.pressure;
+            event->tachometer       = (float) motor_data.tachometer;
             QACTIVE_PUBLISH(&event->super, &me->super);
             break;
         }

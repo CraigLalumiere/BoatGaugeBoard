@@ -8,32 +8,39 @@ Q_DEFINE_THIS_MODULE("Director");
 
 typedef struct
 {
-    int16_t input_x10;
+    float input_value;
     float output_volts;
 } GaugeMapPoint_T;
 
-// Placeholder tables for gauge calibration.
-// Inputs are engineering units in x10; outputs are DAC volts after analog front-end tuning.
+// Gauge calibration tables.
+// Inputs are engineering units; outputs are DAC volts after analog front-end tuning.
 static const GaugeMapPoint_T s_temp_gauge_map[] = {
-    {-200, 0.20f},
-    {0, 0.40f},
-    {200, 0.75f},
-    {400, 1.15f},
-    {600, 1.55f},
-    {800, 1.95f},
-    {1000, 2.30f},
-    {1200, 2.65f},
+    {25.0f, 1.30f},
+    {26.0f, 1.40f},
+    {29.0f, 1.50f},
+    {33.0f, 1.60f},
+    {36.0f, 1.70f},
+    {40.0f, 1.80f},
+    {44.0f, 1.90f},
+    {48.0f, 2.00f},
+    {53.0f, 2.10f},
+    {58.0f, 2.20f},
+    {65.0f, 2.30f},
+    {73.0f, 2.40f},
+    {83.0f, 2.50f},
+    {98.0f, 2.60f},
+    {120.0f, 2.70f},
 };
 
 static const GaugeMapPoint_T s_pressure_gauge_map[] = {
-    {0, 0.20f},
-    {100, 0.45f},
-    {250, 0.85f},
-    {400, 1.30f},
-    {550, 1.75f},
-    {700, 2.10f},
-    {850, 2.40f},
-    {1000, 2.70f},
+    {0.0f, 2.80f},
+    {10.0f, 2.70f},
+    {29.0f, 2.60f},
+    {49.0f, 2.50f},
+    {72.0f, 2.40f},
+    {97.0f, 2.30f},
+    {123.0f, 2.20f},
+    {145.0f, 2.10f},
 };
 
 /**************************************************************************************************\
@@ -63,9 +70,9 @@ QActive *const AO_DIRECTOR = &director_inst.super;
 static QState initial(Director *const me, void const *const par);
 static QState top(Director *const me, QEvt const *const e);
 static float lookup_gauge_voltage(
-    const GaugeMapPoint_T *map, size_t map_len, int16_t input_x10);
-static float map_temperature_to_voltage(int16_t temp_x10);
-static float map_pressure_to_voltage(int16_t pressure_x10);
+    const GaugeMapPoint_T *map, size_t map_len, float input_value);
+static float map_temperature_to_voltage(float temperature_c);
+static float map_pressure_to_voltage(float pressure_psi);
 
 /**************************************************************************************************\
 * Public functions
@@ -99,8 +106,8 @@ static QState top(Director *const me, QEvt const *const e)
     switch (e->sig)
     {
         case Q_ENTRY_SIG: {
-            BSP_Gauge_SetPressure_V(map_pressure_to_voltage(0));
-            BSP_Gauge_SetTemperature_V(map_temperature_to_voltage(0));
+            BSP_Gauge_SetPressure_V(map_pressure_to_voltage(0.0f));
+            BSP_Gauge_SetTemperature_V(map_temperature_to_voltage(25.0f));
             BSP_Gauge_SetOpAmpRef_V(1.78f);
 
             BSP_RpmGauge_SetPFM_RPM(0U);
@@ -119,7 +126,7 @@ static QState top(Director *const me, QEvt const *const e)
 
             BSP_Gauge_SetPressure_V(map_pressure_to_voltage(evt->pressure));
             BSP_Gauge_SetTemperature_V(map_temperature_to_voltage(evt->temperature));
-            BSP_RpmGauge_SetPFM_RPM(evt->tachometer);
+            BSP_RpmGauge_SetPFM_RPM((uint32_t) evt->tachometer);
 
             status = Q_HANDLED();
             break;
@@ -142,32 +149,32 @@ static QState top(Director *const me, QEvt const *const e)
 }
 
 static float lookup_gauge_voltage(
-    const GaugeMapPoint_T *map, size_t map_len, int16_t input_x10)
+    const GaugeMapPoint_T *map, size_t map_len, float input_value)
 {
     Q_ASSERT(map != NULL);
     Q_ASSERT(map_len > 0U);
 
-    if (input_x10 <= map[0].input_x10)
+    if (input_value <= map[0].input_value)
     {
         return map[0].output_volts;
     }
 
     for (size_t i = 1U; i < map_len; ++i)
     {
-        if (input_x10 <= map[i].input_x10)
+        if (input_value <= map[i].input_value)
         {
-            const int16_t x0 = map[i - 1U].input_x10;
-            const int16_t x1 = map[i].input_x10;
+            const float x0   = map[i - 1U].input_value;
+            const float x1   = map[i].input_value;
             const float y0   = map[i - 1U].output_volts;
             const float y1   = map[i].output_volts;
-            const float span = (float) (x1 - x0);
+            const float span = x1 - x0;
 
             if (span <= 0.0f)
             {
                 return y1;
             }
 
-            const float position = ((float) input_x10 - (float) x0) / span;
+            const float position = (input_value - x0) / span;
             return y0 + (position * (y1 - y0));
         }
     }
@@ -175,12 +182,12 @@ static float lookup_gauge_voltage(
     return map[map_len - 1U].output_volts;
 }
 
-static float map_temperature_to_voltage(int16_t temp_x10)
+static float map_temperature_to_voltage(float temperature_c)
 {
-    return lookup_gauge_voltage(s_temp_gauge_map, Q_DIM(s_temp_gauge_map), temp_x10);
+    return lookup_gauge_voltage(s_temp_gauge_map, Q_DIM(s_temp_gauge_map), temperature_c);
 }
 
-static float map_pressure_to_voltage(int16_t pressure_x10)
+static float map_pressure_to_voltage(float pressure_psi)
 {
-    return lookup_gauge_voltage(s_pressure_gauge_map, Q_DIM(s_pressure_gauge_map), pressure_x10);
+    return lookup_gauge_voltage(s_pressure_gauge_map, Q_DIM(s_pressure_gauge_map), pressure_psi);
 }

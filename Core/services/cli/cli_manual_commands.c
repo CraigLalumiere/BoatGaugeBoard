@@ -1,7 +1,10 @@
 #include "cli_manual_commands.h"
+#include "director.h"
 #include "bsp.h"
 #include "bsp_manual.h"
 #include "interfaces/i2c_bus.h"
+#include "pubsub_signals.h"
+#include "qpc.h"
 #include "qsafe.h"
 #include "stdlib.h"
 #include <stdio.h>
@@ -12,6 +15,7 @@ Q_DEFINE_THIS_MODULE("cli_manual_cmds");
 // static SPI_Bus_ID_T Get_SPI_Bus_ID(unsigned long arg_bus_id);
 // static GPIO_Port_ID_T Get_SPI_Bus_Port(char arg_port);
 static I2C_Bus_ID_T Get_I2C_Bus_ID(unsigned long arg_bus_id);
+static bool parse_cli_bool(const char *arg, bool *value);
 
 #define HELP_FULL_DIGITAL_OUT_SET \
     "\r\n\
@@ -23,6 +27,8 @@ static I2C_Bus_ID_T Get_I2C_Bus_ID(unsigned long arg_bus_id);
 
 void on_cli_digital_out_set(EmbeddedCli *cli, char *args, void *context)
 {
+    (void) context;
+
     char arg_port;
     unsigned long arg_pin;
     unsigned long arg_value;
@@ -129,6 +135,104 @@ void on_cli_gauge_set(EmbeddedCli *cli, char *args, void *context)
     embeddedCliPrint(cli, print_buffer);
 }
 
+#define HELP_FULL_MOTOR_DATA_PUBLISH \
+    "\r\n\
+ Usage: motor-data-publish TEMP_C PRESSURE_PSI RPM VBAT START NEUTRAL BUZZER TEMP_GOOD PRES_GOOD\r\n\
+ \r\n\
+ TEMP_C        Floating-point temperature in degrees C\r\n\
+ PRESSURE_PSI  Floating-point pressure in PSI\r\n\
+ RPM           Floating-point engine speed in RPM\r\n\
+ VBAT          Floating-point battery voltage\r\n\
+ START         0 or 1\r\n\
+ NEUTRAL       0 or 1\r\n\
+ BUZZER        0 or 1\r\n\
+ TEMP_GOOD     0 or 1\r\n\
+ PRES_GOOD     0 or 1\r\n"
+
+void on_cli_motor_data_publish(EmbeddedCli *cli, char *args, void *context)
+{
+    (void) context;
+
+    if (embeddedCliGetTokenCount(args) != 9)
+    {
+        embeddedCliPrint(cli, HELP_FULL_MOTOR_DATA_PUBLISH);
+        return;
+    }
+
+    char *arg_end;
+    const char *arg_temp_c       = embeddedCliGetToken(args, 1);
+    const char *arg_pressure_psi = embeddedCliGetToken(args, 2);
+    const char *arg_rpm          = embeddedCliGetToken(args, 3);
+    const char *arg_vbat         = embeddedCliGetToken(args, 4);
+    const char *arg_start        = embeddedCliGetToken(args, 5);
+    const char *arg_neutral      = embeddedCliGetToken(args, 6);
+    const char *arg_buzzer       = embeddedCliGetToken(args, 7);
+    const char *arg_temp_good    = embeddedCliGetToken(args, 8);
+    const char *arg_pres_good    = embeddedCliGetToken(args, 9);
+
+    float temperature = strtof(arg_temp_c, &arg_end);
+    if ((arg_end == arg_temp_c) || (*arg_end != '\0'))
+    {
+        embeddedCliPrint(cli, " TEMP_C must be a floating-point number\r\n");
+        embeddedCliPrint(cli, HELP_FULL_MOTOR_DATA_PUBLISH);
+        return;
+    }
+
+    float pressure = strtof(arg_pressure_psi, &arg_end);
+    if ((arg_end == arg_pressure_psi) || (*arg_end != '\0'))
+    {
+        embeddedCliPrint(cli, " PRESSURE_PSI must be a floating-point number\r\n");
+        embeddedCliPrint(cli, HELP_FULL_MOTOR_DATA_PUBLISH);
+        return;
+    }
+
+    float tachometer = strtof(arg_rpm, &arg_end);
+    if ((arg_end == arg_rpm) || (*arg_end != '\0'))
+    {
+        embeddedCliPrint(cli, " RPM must be a floating-point number\r\n");
+        embeddedCliPrint(cli, HELP_FULL_MOTOR_DATA_PUBLISH);
+        return;
+    }
+
+    float vbat = strtof(arg_vbat, &arg_end);
+    if ((arg_end == arg_vbat) || (*arg_end != '\0'))
+    {
+        embeddedCliPrint(cli, " VBAT must be a floating-point number\r\n");
+        embeddedCliPrint(cli, HELP_FULL_MOTOR_DATA_PUBLISH);
+        return;
+    }
+
+    bool start;
+    bool neutral;
+    bool buzzer;
+    bool temp_good;
+    bool pres_good;
+
+    if (!parse_cli_bool(arg_start, &start) || !parse_cli_bool(arg_neutral, &neutral) ||
+        !parse_cli_bool(arg_buzzer, &buzzer) || !parse_cli_bool(arg_temp_good, &temp_good) ||
+        !parse_cli_bool(arg_pres_good, &pres_good))
+    {
+        embeddedCliPrint(cli, " Boolean fields must be 0 or 1\r\n");
+        embeddedCliPrint(cli, HELP_FULL_MOTOR_DATA_PUBLISH);
+        return;
+    }
+
+    MotorDataEvent_T *event = Q_NEW(MotorDataEvent_T, PUBSUB_MOTOR_DATA_SIG);
+    event->temperature      = temperature;
+    event->pressure         = pressure;
+    event->tachometer       = tachometer;
+    event->vbat             = vbat;
+    event->start            = start;
+    event->neutral          = neutral;
+    event->buzzer           = buzzer;
+    event->temp_good        = temp_good;
+    event->pres_good        = pres_good;
+
+    QACTIVE_POST(AO_DIRECTOR, &event->super, NULL);
+
+    embeddedCliPrint(cli, "Posted PUBSUB_MOTOR_DATA_SIG to Director");
+}
+
 #define HELP_FULL_DIGITAL_IN_READ \
     "\r\n\
  Usage: digital-in-read PORT PIN\r\n\
@@ -138,6 +242,8 @@ void on_cli_gauge_set(EmbeddedCli *cli, char *args, void *context)
 
 void on_cli_digital_in_read(EmbeddedCli *cli, char *args, void *context)
 {
+    (void) context;
+
     char arg_port;
     unsigned long arg_pin;
     char *arg_end;
@@ -222,6 +328,8 @@ static void I2C_Operation_Error_CB(void *cb_data)
 #define MANUAL_I2C_MIN_NUM_ARGS_BEFORE_TX 3
 void on_cli_i2c(EmbeddedCli *cli, char *args, void *context)
 {
+    (void) context;
+
     unsigned long arg_bus_id;
     const char *arg_i2c_type;
     unsigned long arg_address;
@@ -325,6 +433,20 @@ void on_cli_i2c(EmbeddedCli *cli, char *args, void *context)
     {
         embeddedCliPrint(cli, "I2C bus busy\r\n");
     }
+}
+
+static bool parse_cli_bool(const char *arg, bool *value)
+{
+    char *arg_end;
+    unsigned long parsed = strtoul(arg, &arg_end, 10);
+
+    if ((arg_end == arg) || (*arg_end != '\0') || (parsed > 1U))
+    {
+        return false;
+    }
+
+    *value = (parsed != 0U);
+    return true;
 }
 
 static I2C_Bus_ID_T Get_I2C_Bus_ID(unsigned long arg_bus_id)

@@ -81,6 +81,14 @@ static CliCommandBinding cli_cmd_list[] = {
         NULL,                                             // optional pointer to any application context
         on_cli_gauge_set                                  // binding function
     },
+
+    (CliCommandBinding) {
+        "motor-data-publish",                            // command name
+        "Post a debug motor-data event to Director",     // Optional help for a command
+        true,                                             // flag whether to tokenize arguments
+        NULL,                                             // optional pointer to any application context
+        on_cli_motor_data_publish                         // binding function
+    },
 };
 
 void CLI_AddCommands(EmbeddedCli *cli)

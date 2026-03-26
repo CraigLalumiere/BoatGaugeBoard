@@ -16,9 +16,9 @@ extern QActive *const AO_DIRECTOR;
 typedef struct
 {
     QEvt super;
-    uint16_t rpm;           // engine RPM
-    int16_t temp_c_x10;     // temperature in 0.1C
-    uint16_t press_kpa_x10; // coolant pressure in 0.1 kPa (example)
+    float rpm;          // engine RPM
+    float temperature_c; // degrees C
+    float pressure_psi;  // PSI
 } EngineDataEvt;
 
 // Constructor
